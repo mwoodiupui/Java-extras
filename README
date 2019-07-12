@@ -1,0 +1,6 @@
+At the moment, the only thing here is a "null" Transport implementation for
+JavaMail.  It doesn't transport mail at all; its purpose is to spy on code
+that tries to send mail, for use in automated testing.  The point of it is to
+test mail sending with no external processes and no cleanup, by capturing the
+finished message and any other details of the sending.
+
