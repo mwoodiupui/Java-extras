@@ -40,13 +40,6 @@ import javax.mail.event.TransportListener;
  * connections.
  *
  * <p>
- * To use it for inspecting the "sent" message, you'll need to be using a
- * specific instance of this class, probably obtained from
- * Session.getTransport(protocol), and that instance's sendMessage()
- * method.  The static Transport.send() creates a fresh instance that you cannot
- * manipulate.
- *
- * <p>
  * {@link getMessage()} will return the last message that this instance "sent".
  *
  * @author Mark H. Wood <mwood@iupui.edu>
