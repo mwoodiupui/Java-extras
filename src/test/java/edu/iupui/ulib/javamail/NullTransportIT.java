@@ -28,6 +28,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -48,12 +50,22 @@ import org.junit.Test;
 public class NullTransportIT {
     private static final String PROTOCOL = "null";
 
-    // The last message that was "sent".
-    private Message sentMessage;
+    /**
+     * The last message that was "sent".
+     * <p>
+     * Why is this a {@link CompletableFuture}?  Ask the person who thought it
+     * was reasonable to create a separate thread to call TransportListeners.
+     * Without some sort of synchronization, the listener doesn't fire until
+     * after the test has crashed on an NPE.  Unless you are stepping it in a
+     * debugger.  What fun!
+     */
+    private final CompletableFuture<Message> futureSentMessage
+            = new CompletableFuture<>();
 
     @Test
     public void testTransport()
-            throws UnsupportedEncodingException, MessagingException, IOException {
+            throws UnsupportedEncodingException, MessagingException,
+                   IOException, InterruptedException, ExecutionException {
         // Create a recipient address.
         Address fromAddress = new InternetAddress("sender@example.com",
                 "Jane Sender");
@@ -91,6 +103,7 @@ public class NullTransportIT {
         //transport.sendMessage(message, null);
 
         // Check the captured sent message.
+        Message sentMessage = futureSentMessage.get();
         ByteArrayOutputStream messageStream = new ByteArrayOutputStream();
         sentMessage.writeTo(messageStream);
         System.out.println();
@@ -108,21 +121,26 @@ public class NullTransportIT {
         System.out.println();
     }
 
+    /**
+     * This seems to be the only way to get a copy of the completed Message
+     * without potentially rewriting the code under test.  Consider borrowing
+     * this technique for your own tests.
+     */
     private class MyTransportListener
             implements TransportListener {
         @Override
         public void messageDelivered(TransportEvent e) {
-            sentMessage = e.getMessage();
+            futureSentMessage.complete(e.getMessage());
         }
 
         @Override
         public void messageNotDelivered(TransportEvent e) {
-            sentMessage = e.getMessage();
+            futureSentMessage.complete(e.getMessage());
         }
 
         @Override
         public void messagePartiallyDelivered(TransportEvent e) {
-            sentMessage = e.getMessage();
+            futureSentMessage.complete(e.getMessage());
         }
     }
 }
